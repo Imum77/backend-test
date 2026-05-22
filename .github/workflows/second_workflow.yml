@@ -17,10 +17,10 @@ jobs:
                 python --version 
                 pip --version 
     run-second-command:
-        runs-on: ubuntu 22.04
+        runs-on: ubuntu latest
         needs: run-first-command
         steps:
-            - name: Display Python and Pip versions on Ubuntu 22.04
+            - name: Display Python and Pip versions on Ubuntu latest
               run: 
                 python --version
                 pip --version
