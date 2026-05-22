@@ -10,8 +10,8 @@ jobs:
 
             - name: Command in multiple lines
               run: |
-                python --version: '3.11'
-                pip --version: '23.0.1'
+                python --version 
+                pip --version
 
                 
 
