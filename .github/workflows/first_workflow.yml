@@ -1,0 +1,9 @@
+name: First Workflow
+on: [push]
+
+jobs:
+    run-first-command:
+        runs-on: ubuntu-latest
+        steps: 
+            - name: Run first command
+              run: echo "Hello, World!"
