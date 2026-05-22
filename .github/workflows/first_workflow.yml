@@ -10,7 +10,7 @@ jobs:
 
             - name: Command in multiple lines
               run: |
-                python --version 
+                python --version
                 pip --version
 
                 
