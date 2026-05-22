@@ -4,7 +4,12 @@ services:
   backend:
     build: ./backend
     container_name: fastapi_backend
+    environment:
+      - HTTP_PROXY=http://10.84.142.62:3128
+      - HTTPS_PROXY=http://10.84.142.62:3128
+      - http_proxy=http://10.84.142.62:3128
+      - https_proxy=http://10.84.142.62:3128
     ports:
-      - "8000:8000"
+      - "8011:8011"
     volumes:
       - ./backend:/app
