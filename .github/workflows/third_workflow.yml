@@ -1,6 +1,9 @@
 name: Third Workflow
 on: push
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
     run-first-command:
         runs-on: ubuntu-latest
