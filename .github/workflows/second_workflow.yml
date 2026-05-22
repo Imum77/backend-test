@@ -17,10 +17,10 @@ jobs:
                 python --version 
                 pip --version 
     run-second-command:
-        runs-on: windows-latest
+        runs-on: ubuntu 22.04
         needs: run-first-command
         steps:
-            - name: Display Python and Pip versions on Windows
+            - name: Display Python and Pip versions on Ubuntu 22.04
               run: 
                 python --version
                 pip --version
