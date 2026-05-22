@@ -10,9 +10,9 @@ jobs:
                 python --version
                 pip --version
     run-parallel-command:
-        runs-on: debian-latest
+        runs-on: ubuntu-latest
         steps:
-            - name: Display Python and Pip versions on Debian
+            - name: Display Python and Pip versions on Ubuntu
               run: |
                 python --version 
                 pip --version 
