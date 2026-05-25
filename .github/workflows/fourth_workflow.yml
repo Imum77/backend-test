@@ -1,0 +1,16 @@
+name: Fourth Workflow
+on: 
+  workflow_run:
+    workflows: ["Third Workflow"]
+    types:
+      - completed
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+jobs:
+    run-first-command:
+        runs-on: ubuntu-latest
+        steps: 
+            - name: List Files
+              run: echo "Hello"
