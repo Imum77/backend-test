@@ -1,14 +1,13 @@
-version: '3.8'
-
 services:
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      args:
+        - HTTP_PROXY=http://10.84.142.62:3128
+        - HTTPS_PROXY=http://10.84.142.62:3128
+        - http_proxy=http://10.84.142.62:3128
+        - https_proxy=http://10.84.142.62:3128
     container_name: fastapi_backend
-    environment:
-      - HTTP_PROXY=http://10.84.142.62:3128
-      - HTTPS_PROXY=http://10.84.142.62:3128
-      - http_proxy=http://10.84.142.62:3128
-      - https_proxy=http://10.84.142.62:3128
     ports:
       - "8011:8011"
     volumes:
