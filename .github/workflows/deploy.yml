@@ -30,10 +30,6 @@ jobs:
                 context: ./backend
                 file: ./backend/Dockerfile
                 push: false 
-                # Передаем прокси как аргументы сборки, если они нужны при скачивании pip-пакетов в GitHub
-                build-args: | 
-                    http_proxy=http://10.84.142.62:3128
-                    https_proxy=http://10.84.142.62:3128
 
     deploy-to-server:
         needs: build-and-test
