@@ -33,7 +33,7 @@ jobs:
 
     deploy-to-server:
         needs: build-and-test
-        runs-on: ubuuntu-latest
+        runs-on: ubuntu-latest
 
         steps: 
             - name: Deploying via ssh commands
