@@ -1,0 +1,57 @@
+name: FastAPI Deploy Pipeline
+
+on:
+  push:
+    branches: ["main"] # Срабатывает только при отправке кода в главную ветку
+jobs:
+    # --- ЭТАП 1: ПРОВЕРКА КОДА И СБОРКА DOCKER ---
+    build-and-test:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v5
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with: 
+                python-version: '3.11'
+
+            - name: Check Python Syntax
+              run: |
+                python -m compileall backend/
+
+            - name: Set up Docker Buildx
+              uses: actions/setup-buildx-action@v3
+              
+            # Тестируем сборку Dockerfile локально в GitHub (без отправки куда-либо)
+            - name: Test Docker Build
+              uses: docker/build-push-action@v5
+              with:
+                context: ./backend
+                file: ./backend/Dockerfile
+                push: false 
+                # Передаем прокси как аргументы сборки, если они нужны при скачивании pip-пакетов в GitHub
+                build-args: | 
+                    http_proxy=http://10.84.142.62:3128
+                    https_proxy=http://10.84.142.62:3128
+
+    deploy-to-server:
+        needs: build-and-test
+        runs-on: ubuuntu-latest
+
+        steps: 
+            - name: Deploying via ssh commands
+              uses: appleboy/ssh-action@1.0.3
+              with: 
+                host: ${{ secrets.SERVER_HOST }}
+                username: ${{ secrets.SERVER_USERName }}
+                key: ${{ secrets.SSH_PRIVATE_KEY }}
+                script: |
+                    # Переходим в директорию с проектом на сервере
+                    cd /backend
+
+                    git pull origin main 
+
+                    docker-compose up -d --build
+
+                    docker system prune -f
