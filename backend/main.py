@@ -6,8 +6,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from pydantic import BaseModel
 
-#7777777777777777
-
 # Настройки БД
 DATABASE_URL = "sqlite:///./sql_app.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
@@ -38,13 +36,11 @@ class ItemResponse(ItemBase):
 app = FastAPI(title="FastAPI CRUD App (No Nginx)", docs_url="/docs")
 
 # --- НАСТРОЙКА ВСТРОЕННОГО ПРОКСИ / МИДЛВАРЕ ---
-# Защита от HTTP Host Header attacks (заменяет базовый функционал прокси)
 app.add_middleware(
     TrustedHostMiddleware, 
-    allowed_hosts=["*"]  # В продакшене замени на свой домен, например: ["yourdomain.com", "localhost"]
+    allowed_hosts=["*"]  
 )
 
-# CORS-проксирование (разрешаем запросы с фронтенда/других сервисов)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -60,10 +56,17 @@ def get_db():
     finally:
         db.close()
 
+# --- ДОПОЛНИТЕЛЬНЫЕ ЭНДПОИНТЫ ДЛЯ ТЕСТА СБОРКИ ---
+
+@app.get("/health", tags=["System"])
+def health_check():
+    """Эндпоинт для проверки того, что контейнер успешно поднялся и работает"""
+    return {"status": "healthy", "message": "FastAPI pipeline works perfectly!"}
+
 # --- CRUD ЗАПРОСЫ ---
 
 # POST
-@app.post("/items", response_model=ItemResponse, status_code=201)
+@app.post("/items", response_model=ItemResponse, status_code=201, tags=["Items"])
 def create_item(item: ItemCreate, db: Session = Depends(get_db)):
     db_item = DBItem(title=item.title, description=item.description)
     db.add(db_item)
@@ -71,13 +74,26 @@ def create_item(item: ItemCreate, db: Session = Depends(get_db)):
     db.refresh(db_item)
     return db_item
 
-# GET
-@app.get("/items", response_model=list[ItemResponse])
-def read_items(db: Session = Depends(get_db)):
-    return db.query(DBItem).all()
+# GET ALL (С поиском)
+@app.get("/items", response_model=list[ItemResponse], tags=["Items"])
+def read_items(search: str | None = None, db: Session = Depends(get_db)):
+    """Получает все элементы. Можно отфильтровать: /items?search=название"""
+    query = db.query(DBItem)
+    if search:
+        query = query.filter(DBItem.title.contains(search))
+    return query.all()
+
+# GET BY ID (Новый метод)
+@app.get("/items/{item_id}", response_model=ItemResponse, tags=["Items"])
+def read_item_by_id(item_id: int, db: Session = Depends(get_db)):
+    """Получение одного конкретного элемента по его ID"""
+    db_item = db.query(DBItem).filter(DBItem.id == item_id).first()
+    if not db_item:
+        raise HTTPException(status_code=404, detail=f"Item with id {item_id} not found")
+    return db_item
 
 # PUT
-@app.put("/items/{item_id}", response_model=ItemResponse)
+@app.put("/items/{item_id}", response_model=ItemResponse, tags=["Items"])
 def update_item(item_id: int, updated_item: ItemCreate, db: Session = Depends(get_db)):
     db_item = db.query(DBItem).filter(DBItem.id == item_id).first()
     if not db_item:
@@ -89,7 +105,7 @@ def update_item(item_id: int, updated_item: ItemCreate, db: Session = Depends(ge
     return db_item
 
 # DELETE
-@app.delete("/items/{item_id}", status_code=204)
+@app.delete("/items/{item_id}", status_code=204, tags=["Items"])
 def delete_item(item_id: int, db: Session = Depends(get_db)):
     db_item = db.query(DBItem).filter(DBItem.id == item_id).first()
     if not db_item:
