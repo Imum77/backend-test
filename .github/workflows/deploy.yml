@@ -2,10 +2,10 @@ name: FastAPI Deploy Pipeline
 
 on:
   push:
-    branches: ["main"] # Срабатывает только при отправке кода в главную ветку
+    branches: ["main"]
 
 jobs:
-  # --- ЭТАП 1: ПРОВЕРКА КОДА И СБОРКА DOCKER ---
+  # --- ЭТАП 1: ПРОВЕРКА КОДА И СБОРКА DOCKER (Оставляем без изменений) ---
   build-and-test:
     runs-on: ubuntu-latest
     steps:
@@ -24,7 +24,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
           
-      # Тестируем сборку Dockerfile локально в GitHub (без отправки куда-либо и без прокси)
       - name: Test Docker Build
         uses: docker/build-push-action@v5
         with:
@@ -32,18 +31,62 @@ jobs:
           file: ./backend/Dockerfile
           push: false 
 
-  # --- ЭТАП 2: ДЕПЛОЙ НА ЛОКАЛЬНЫЙ СЕРВЕР ---
+  # --- ЭТАП 2: УМНЫЙ BLUE-GREEN ДЕПЛОЙ НА СЕРВЕР ---
   deploy-to-server:
     needs: build-and-test
-    runs-on: self-hosted # Запускается прямо на твоем сервере sr-dus-netdata
+    runs-on: self-hosted # Твой раннер sr-dus-netdata
 
     steps: 
-      # Шаг 1: Скачиваем свежий код из коммита прямо в рабочую папку раннера на сервере
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      # Шаг 2: Локально собираем и поднимаем контейнеры в Docker
-      - name: Deploy Docker Containers
+      # Шаг 1: Поднимаем НОВУЮ версию на ТЕСТОВОМ порту 8077
+      - name: Start Test Container (Port 8077)
         run: |
+          export HOST_PORT=8077
+          export CONTAINER_NAME=fastapi_backend_test
+          # Используем имя проекта "backend_test", чтобы изолировать от продакшена
+          docker compose -p backend_test up -d --build
+
+      # Шаг 2: Проверяем, отвечает ли тестовый контейнер на /health
+      - name: Health Check Test Container
+        run: |
+          echo "Ожидаем запуск контейнера..."
+          sleep 5
+          
+          # Нам нужно обойти системный прокси для запроса на localhost, используем --noproxy
+          HEALTH_URL="http://127.0.0.1:8077/health"
+          
+          # Цикл проверки: 6 попыток каждые 5 секунд (всего 30 секунд максимум)
+          for i in {1..6}; do
+            echo "Попытка проверки здоровья #$i..."
+            RESPONSE=$(curl --noproxy 127.0.0.1 -s -w "%{http_code}" "$HEALTH_URL" -o /dev/null) || true
+            
+            if [ "$RESPONSE" -eq 200 ]; then
+              echo "Успех! Новая версия работает отлично (HTTP 200)."
+              exit 0
+            fi
+            sleep 5
+          done
+          
+          echo "Ошибка: Новый контейнер не поднялся или не прошел Health Check!"
+          echo "Уничтожаем бракованный тестовый контейнер..."
+          docker compose -p backend_test down
+          exit 1 # Пайплайн падает, старая версия на 8011 продолжает жить
+
+      # Шаг 3: Если тест пройден — гасим тест и плавно обновляем боевой порт 8011
+      - name: Switch to Production (Port 8011)
+        run: |
+          echo "Тесты пройдены успешно. Удаляем тестовый контейнер..."
+          docker compose -p backend_test down
+          
+          echo "Обновляем основное приложение на продакшн порту 8011..."
+          export HOST_PORT=8011
+          export CONTAINER_NAME=fastapi_backend
+          
+          # Перезапускаем основное приложение. 
+          # Docker Compose сам остановит старый контейнер и поднимет новый за доли секунды
           docker compose up -d --build
+          
+          echo "Деплой успешно завершен! Текущий статус контейнеров:"
           docker ps

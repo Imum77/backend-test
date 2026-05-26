@@ -7,8 +7,8 @@ services:
         - HTTPS_PROXY=http://10.84.142.62:3128
         - http_proxy=http://10.84.142.62:3128
         - https_proxy=http://10.84.142.62:3128
-    container_name: fastapi_backend
+    container_name: ${CONTAINER_NAME:-fastapi_backend}
     ports:
-      - "8011:8011"
+      - "${HOST_PORT:-8011}:8011" # Наружный порт меняется, внутренний в контейнере всегда 8011
     volumes:
       - ./backend:/app
