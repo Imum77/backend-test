@@ -134,6 +134,20 @@ def patch_item(item_id: int, updated_fields: ItemUpdatePatch, db: Session = Depe
     db.refresh(db_item)
     return db_item
 
+# --- НОВЫЙ ЭНДПОИНТ: ДУБЛИРОВАНИЕ ЭЛЕМЕНТА ---
+@app.post("/items/{item_id}/duplicate", response_model=ItemResponse, status_code=201, tags=["Items"])
+def duplicate_item(item_id: int, db: Session = Depends(get_db)):
+    """Создаёт копию существующего элемента по его ID"""
+    db_item = db.query(DBItem).filter(DBItem.id == item_id).first()
+    if not db_item:
+        raise HTTPException(status_code=404, detail=f"Item with id {item_id} not found")
+
+    new_item = DBItem(title=f"{db_item.title} (copy)", description=db_item.description)
+    db.add(new_item)
+    db.commit()
+    db.refresh(new_item)
+    return new_item
+
 # DELETE
 @app.delete("/items/{item_id}", status_code=204, tags=["Items"])
 def delete_item(item_id: int, db: Session = Depends(get_db)):
