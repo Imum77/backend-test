@@ -1,4 +1,0 @@
-steps:
-  - |
-    deploy() { docker compose up -d --build; }
-    deploy || deploy || { docker builder prune -f; deploy; }

@@ -1,0 +1,38 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Build & Deploy via docker compose
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build and start containers
+        run: |
+          deploy() { docker compose up -d --build; }
+          deploy || deploy || { docker builder prune -f; deploy; }
+
+      - name: Health check
+        run: |
+          for i in $(seq 1 10); do
+            if curl -fsS "http://localhost:${HOST_PORT:-8011}/health"; then
+              echo "Service is healthy"
+              exit 0
+            fi
+            echo "Waiting for service... ($i/10)"
+            sleep 3
+          done
+          echo "Health check failed"
+          docker compose logs --tail=50
+          exit 1
+
+      - name: Cleanup dangling images
+        if: always()
+        run: docker image prune -f
